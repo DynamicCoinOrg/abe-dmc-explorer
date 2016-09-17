@@ -65,6 +65,7 @@ WORK_BITS = 304  # XXX more than necessary.
 CHAIN_CONFIG = [
     {"chain":"Bitcoin"},
     {"chain":"Testnet"},
+    {"chain":"Dynamiccoin"},
     {"chain":"Namecoin"},
     {"chain":"Weeds", "policy":"Sha256Chain",
      "code3":"WDS", "address_version":"\xf3", "magic":"\xf8\xbf\xb5\xda"},
@@ -521,6 +522,7 @@ class DataStore(object):
     cc.in_longest,
     b.block_id,
     b.block_hash,
+    b.block_pow,
     b.block_version,
     b.block_hashMerkleRoot,
     b.block_nTime,
@@ -548,6 +550,7 @@ LEFT JOIN block prev ON (b.prev_block_id = prev.block_id)""",
     cc.in_longest,
     cc.block_id,
     b.block_hash,
+    b.block_pow,
     b.block_height,
     block_tx.tx_pos,
     tx.tx_id,
@@ -575,6 +578,7 @@ LEFT JOIN block prev ON (b.prev_block_id = prev.block_id)""",
     cc.in_longest,
     cc.block_id,
     b.block_hash,
+    b.block_pow,
     b.block_height,
     block_tx.tx_pos,
     tx.tx_id,
@@ -652,6 +656,7 @@ store._ddl['configvar'],
 """CREATE TABLE block (
     block_id      NUMERIC(14) NOT NULL PRIMARY KEY,
     block_hash    BINARY(32)  UNIQUE NOT NULL,
+    block_pow     BINARY(32)  UNIQUE NOT NULL,
     block_version NUMERIC(10),
     block_hashMerkleRoot BINARY(32),
     block_nTime   NUMERIC(20),
@@ -1137,7 +1142,7 @@ store._ddl['txout_approx'],
         try:
             store.sql(
                 """INSERT INTO block (
-                    block_id, block_hash, block_version, block_hashMerkleRoot,
+                    block_id, block_hash, block_pow, block_version, block_hashMerkleRoot,
                     block_nTime, block_nBits, block_nNonce, block_height,
                     prev_block_id, block_chain_work, block_value_in,
                     block_value_out, block_total_satoshis,
@@ -1146,7 +1151,8 @@ store._ddl['txout_approx'],
                 ) VALUES (
                     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                 )""",
-                (block_id, store.hashin(b['hash']), store.intin(b['version']),
+                (block_id, store.hashin(b['hash']), store.hashin(b['pow']),
+                 store.intin(b['version']),
                  store.hashin(b['hashMerkleRoot']), store.intin(b['nTime']),
                  store.intin(b['nBits']), store.intin(b['nNonce']),
                  b['height'], prev_block_id,
@@ -1630,20 +1636,20 @@ store._ddl['txout_approx'],
                 # Should not normally get here.
                 found_chain = store.get_default_chain()
 
-        (block_id, block_hash, block_version, hashMerkleRoot,
+        (block_id, block_hash, block_pow, block_version, hashMerkleRoot,
          nTime, nBits, nNonce, height,
          prev_block_hash, block_chain_work, value_in, value_out,
          satoshis, seconds, ss, total_ss, destroyed, num_tx) = (
-            row[0], store.hashout_hex(row[1]), row[2],
-            store.hashout_hex(row[3]), row[4], int(row[5]), row[6],
-            row[7], store.hashout_hex(row[8]),
-            store.binout_int(row[9]), int(row[10]), int(row[11]),
-            None if row[12] is None else int(row[12]),
+            row[0], store.hashout_hex(row[1]), store.hashout_hex(row[2]), row[3],
+            store.hashout_hex(row[4]), row[5], int(row[6]), row[7],
+            row[8], store.hashout_hex(row[9]),
+            store.binout_int(row[10]), int(row[11]), int(row[12]),
             None if row[13] is None else int(row[13]),
             None if row[14] is None else int(row[14]),
             None if row[15] is None else int(row[15]),
             None if row[16] is None else int(row[16]),
-            int(row[17]),
+            None if row[17] is None else int(row[17]),
+            int(row[18]),
             )
 
         next_hashes = [
@@ -1734,6 +1740,7 @@ store._ddl['txout_approx'],
             'fees':                  block_fees,
             'generated':             generated,
             'hash':                  block_hash,
+            'pow':                   block_pow,
             'hashMerkleRoot':        hashMerkleRoot,
             'hashPrev':              prev_block_hash,
             'height':                height,
@@ -2381,7 +2388,7 @@ store._ddl['txout_approx'],
 
     def offer_existing_block(store, hash, chain_id):
         block_row = store.selectrow("""
-            SELECT block_id, block_height, block_chain_work,
+            SELECT block_id, block_height, block_pow, block_chain_work,
                    block_nTime, block_total_seconds,
                    block_total_satoshis, block_satoshi_seconds,
                    block_total_ss
@@ -2401,12 +2408,13 @@ store._ddl['txout_approx'],
         b = {
             "block_id":   block_row[0],
             "height":     block_row[1],
-            "chain_work": store.binout_int(block_row[2]),
-            "nTime":      block_row[3],
-            "seconds":    block_row[4],
-            "satoshis":   block_row[5],
-            "ss":         block_row[6],
-            "total_ss":   block_row[7]}
+            "pow":        block_row[2]
+            "chain_work": store.binout_int(block_row[3]),
+            "nTime":      block_row[4],
+            "seconds":    block_row[5],
+            "satoshis":   block_row[6],
+            "ss":         block_row[7],
+            "total_ss":   block_row[8]}
 
         if store.selectrow("""
             SELECT 1
@@ -2738,6 +2746,7 @@ store._ddl['txout_approx'],
 
                     block = {
                         'hash':     hash,
+                        'pow':      rpc_block['pow'].decode('hex')[::-1]
                         'version':  int(rpc_block['version']),
                         'hashPrev': prev_hash,
                         'hashMerkleRoot':

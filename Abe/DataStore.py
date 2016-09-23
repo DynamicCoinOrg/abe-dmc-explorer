@@ -1149,7 +1149,7 @@ store._ddl['txout_approx'],
                     block_total_seconds, block_total_ss, block_num_tx,
                     search_block_id
                 ) VALUES (
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                 )""",
                 (block_id, store.hashin(b['hash']), store.hashin(b['pow']),
                  store.intin(b['version']),
@@ -1593,6 +1593,7 @@ store._ddl['txout_approx'],
                 in_longest,
                 block_id,
                 block_hash,
+                block_pow,
                 block_version,
                 block_hashMerkleRoot,
                 block_nTime,
@@ -2408,7 +2409,7 @@ store._ddl['txout_approx'],
         b = {
             "block_id":   block_row[0],
             "height":     block_row[1],
-            "pow":        block_row[2]
+            "pow":        block_row[2],
             "chain_work": store.binout_int(block_row[3]),
             "nTime":      block_row[4],
             "seconds":    block_row[5],
@@ -2746,7 +2747,7 @@ store._ddl['txout_approx'],
 
                     block = {
                         'hash':     hash,
-                        'pow':      rpc_block['pow'].decode('hex')[::-1]
+                        'pow':      rpc_block['pow'].decode('hex')[::-1],
                         'version':  int(rpc_block['version']),
                         'hashPrev': prev_hash,
                         'hashMerkleRoot':

@@ -26,9 +26,6 @@ class Dynamiccoin(Sha256Chain):
         Sha256Chain.__init__(chain, **kwargs)
 
     def block_header_hash(chain, header):
-        return block_id_hash(chain, header)
-
-    def block_id_hash(chain, header):
         from .. import util
         return util.double_sha256(header)
 

@@ -75,7 +75,7 @@ def mixup_blocks(store, ds, count, datadir_chain = None, seed = None):
         # algorithms.  Time to resurrect policy_id?
 
         block_row = store.selectrow("""
-            SELECT block_id, block_height, block_chain_work,
+            SELECT block_id, block_height, block_pow, block_chain_work,
                    block_nTime, block_total_seconds,
                    block_total_satoshis, block_satoshi_seconds
               FROM block
@@ -89,11 +89,12 @@ def mixup_blocks(store, ds, count, datadir_chain = None, seed = None):
                 b = {
                     "block_id":   block_row[0],
                     "height":     block_row[1],
-                    "chain_work": store.binout_int(block_row[2]),
-                    "nTime":      block_row[3],
-                    "seconds":    block_row[4],
-                    "satoshis":   block_row[5],
-                    "ss":         block_row[6]}
+                    "pow":        block_row[2],
+                    "chain_work": store.binout_int(block_row[3]),
+                    "nTime":      block_row[4],
+                    "seconds":    block_row[5],
+                    "satoshis":   block_row[6],
+                    "ss":         block_row[7]}
                 if store.selectrow("""
                     SELECT 1
                       FROM chain_candidate

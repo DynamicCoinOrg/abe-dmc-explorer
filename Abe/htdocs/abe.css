@@ -24,8 +24,14 @@ td {
     border-width: 1px;
     border-style: solid;
 }
+.td_header {
+    font-size: 7;
+    font-weight: bold;
+}
+
 table {
     border-spacing: 0;
+    margin-top: 30px;
 }
 .shortlink {
     font-size: smaller;

@@ -322,6 +322,7 @@ def replace_chain_summary(store):
             cc.chain_id,
             cc.in_longest,
             b.block_id,
+            b.block_pow,
             b.block_hash,
             b.block_version,
             b.block_hashMerkleRoot,

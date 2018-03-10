@@ -36,6 +36,7 @@ import readconf
 import deserialize
 import util  # Added functions.
 import base58
+import re
 
 __version__ = version.__version__
 
@@ -364,6 +365,65 @@ class Abe:
         body += ['</table>\n']
         if len(rows) == 0:
             body += ['<p>No block data found.</p>\n']
+
+	body += [
+            '<table>\n',
+	    '<tr><th></th><th></th>',
+            '</tr>\n']
+
+	chain = abe.store.get_chain_by_name("Dynamiccoin")
+#	Tx last day count
+	start_time = time.time() - 24 * 60 * 60
+	query = "SELECT SUM(b.block_value_out) FROM block b JOIN chain c ON (c.chain_name = 'Dynamiccoin' && b.block_nTime > "
+	query += str(start_time)
+	query += ")"
+	rows = abe.store.selectall(query)
+	for row in rows:
+	    Tx_day = format_coins(row[0], chain)
+	
+#	Tx last week count
+	start_time = time.time() -7 * 24 * 60 * 60
+	query = "SELECT SUM(b.block_value_out) FROM block b JOIN chain c ON (c.chain_name = 'Dynamiccoin' && b.block_nTime > "
+	query += str(start_time)
+	query += ")"
+	rows = abe.store.selectall(query)
+	for row in rows:
+	    Tx_week = format_coins(row[0], chain)
+	
+#	Tx last month count
+
+	start_time = time.time() - 30 * 24 * 60 * 60
+	query = "SELECT SUM(b.block_value_out) FROM block b JOIN chain c ON (c.chain_name = 'Dynamiccoin' && b.block_nTime > "
+	query += str(start_time)
+	query += ")"
+	rows = abe.store.selectall(query)
+	for row in rows:
+	    Tx_month = format_coins(row[0], chain)
+
+#	Tx last year count
+	start_time = time.time() - 365 * 24 * 60 * 60
+	query = "SELECT SUM(b.block_value_out) FROM block b JOIN chain c ON (c.chain_name = 'Dynamiccoin' && b.block_nTime > "
+	query += str(start_time)
+	query += ")"
+	rows = abe.store.selectall(query)
+	for row in rows:
+	    Tx_year = format_coins(row[0], chain)
+
+#	Tx from beginning count
+	start_time = 0
+	query = "SELECT SUM(b.block_value_out) FROM block b JOIN chain c ON (c.chain_name = 'Dynamiccoin' && b.block_nTime > "
+	query += str(start_time)
+	query += ")"
+	rows = abe.store.selectall(query)
+	for row in rows:
+	    Tx_total = format_coins(row[0], chain)
+	
+        body += ['<tr><td class="td_header">Volume last 24 hours</td><td>', Tx_day, '</td></tr>',
+		'<tr><td class="td_header">Volume last week</td><td>', Tx_week, '</td></tr>',
+		'<tr> <td class="td_header">Volume last month</td><td>', Tx_month, '</td></tr>',
+		'<tr> <td class="td_header">Volume last year</td><td>', Tx_year, '</td></tr>',
+		'<tr><td class = "td_header">Volume from beginning</td><td> ', Tx_total, ' </td> </tr>\n']
+	body += ['</table>']
 
     def chain_lookup_by_name(abe, symbol):
         if symbol is None:
@@ -1782,6 +1842,31 @@ def path_info_int(page, default):
 def format_time(nTime):
     import time
     return time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(int(nTime)))
+
+def format_coins(satoshis, chain):
+    decimals = DEFAULT_DECIMALS if chain.decimals is None else chain.decimals
+    coin = 10 ** decimals
+
+    if satoshis is None:
+        return ''
+    if satoshis < 0:
+        return '-' + format_satoshis(-satoshis, chain)
+    satoshis = int(satoshis)
+    integer = satoshis / coin
+    frac = satoshis % coin
+    float_coins = integer + float(frac)/coin
+
+    str_val = re.sub("(\d)(?=(\d{3})+(?!\d))", r"\1,", "%.2f" % float_coins)
+    str_val = '$' + str_val
+    return str_val
+
+def group(number):
+    s = '%d' % number
+    groups = []
+    while s and s[-1].isdigit():
+        groups.append(s[-3:])
+        s = s[:-3]
+    return s + ','.join(reversed(groups))
 
 def format_satoshis(satoshis, chain):
     decimals = DEFAULT_DECIMALS if chain.decimals is None else chain.decimals
